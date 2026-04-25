@@ -41,6 +41,7 @@ def load_rawg_key():
 
     return None
 
+
 def load_admin_sync_key():
     key = os.getenv("ADMIN_SYNC_KEY")
     if key:
@@ -61,6 +62,7 @@ def load_admin_sync_key():
                 continue
 
     return None
+
 
 RAWG_API_KEY = load_rawg_key()
 ADMIN_SYNC_KEY = load_admin_sync_key()
@@ -94,6 +96,75 @@ def game_to_dict(game):
         "description": game.description,
         "image": game.image,
     }
+
+
+def save_rawg_items_to_db(items, db):
+    saved_count = 0
+    updated_count = 0
+
+    for item in items:
+        release_date = item.get("released")
+        rawg_id = item.get("id")
+        title = item.get("name")
+
+        if not release_date or not rawg_id or not title:
+            continue
+
+        platforms = []
+        for platform_info in item.get("platforms") or []:
+            platform_name = platform_info.get("platform", {}).get("name")
+            if platform_name:
+                platforms.append(platform_name)
+
+        genres = []
+        for genre in item.get("genres") or []:
+            genre_name = genre.get("name")
+            if genre_name:
+                genres.append(genre_name)
+
+        existing_game = db.query(Game).filter(Game.rawg_id == rawg_id).first()
+
+        if existing_game:
+            existing_game.title = title
+            existing_game.platforms = "|".join(platforms)
+            existing_game.release_date = release_date
+            existing_game.genre = ", ".join(genres) if genres else "Unknown"
+            existing_game.status = "Coming Soon"
+            existing_game.description = "RAWG API에서 가져온 게임 출시 예정 정보입니다."
+            existing_game.image = item.get("background_image") or ""
+            updated_count += 1
+        else:
+            new_game = Game(
+                rawg_id=rawg_id,
+                title=title,
+                platforms="|".join(platforms),
+                release_date=release_date,
+                genre=", ".join(genres) if genres else "Unknown",
+                status="Coming Soon",
+                description="RAWG API에서 가져온 게임 출시 예정 정보입니다.",
+                image=item.get("background_image") or "",
+            )
+            db.add(new_game)
+            saved_count += 1
+
+    return saved_count, updated_count
+
+
+async def fetch_rawg_games(client, params):
+    response = await client.get(f"{RAWG_BASE_URL}/games", params=params)
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "RAWG API 요청 실패",
+                "status_code": response.status_code,
+                "detail": response.text,
+            },
+        )
+
+    data = response.json()
+    return data.get("results", [])
 
 
 @app.get("/")
@@ -131,81 +202,57 @@ async def sync_games_from_rawg(x_admin_key: str | None = Header(default=None)):
     today = date.today()
     one_year_later = today + timedelta(days=365)
 
-    params = {
+    base_params = {
         "key": RAWG_API_KEY,
         "dates": f"{today},{one_year_later}",
         "ordering": "released",
         "page_size": 40,
     }
 
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        response = await client.get(f"{RAWG_BASE_URL}/games", params=params)
+    # RAWG 플랫폼 ID:
+    # iOS = 3, Android = 21
+    sync_targets = [
+        {"label": "all", "platforms": None},
+        {"label": "ios", "platforms": "3"},
+        {"label": "android", "platforms": "21"},
+    ]
 
-    if response.status_code != 200:
-        return {
-            "error": "RAWG API 요청 실패",
-            "status_code": response.status_code,
-            "detail": response.text,
-        }
-
-    data = response.json()
     db = SessionLocal()
 
-    saved_count = 0
-    updated_count = 0
+    total_saved = 0
+    total_updated = 0
+    sync_results = []
 
     try:
-        for item in data.get("results", []):
-            release_date = item.get("released")
-            rawg_id = item.get("id")
-            title = item.get("name")
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            for target in sync_targets:
+                params = dict(base_params)
 
-            if not release_date or not rawg_id or not title:
-                continue
+                if target["platforms"]:
+                    params["platforms"] = target["platforms"]
 
-            platforms = []
-            for platform_info in item.get("platforms") or []:
-                platform_name = platform_info.get("platform", {}).get("name")
-                if platform_name:
-                    platforms.append(platform_name)
+                items = await fetch_rawg_games(client, params)
+                saved_count, updated_count = save_rawg_items_to_db(items, db)
 
-            genres = []
-            for genre in item.get("genres") or []:
-                genre_name = genre.get("name")
-                if genre_name:
-                    genres.append(genre_name)
+                total_saved += saved_count
+                total_updated += updated_count
 
-            existing_game = db.query(Game).filter(Game.rawg_id == rawg_id).first()
-
-            if existing_game:
-                existing_game.title = title
-                existing_game.platforms = "|".join(platforms)
-                existing_game.release_date = release_date
-                existing_game.genre = ", ".join(genres) if genres else "Unknown"
-                existing_game.status = "Coming Soon"
-                existing_game.description = "RAWG API에서 가져온 게임 출시 예정 정보입니다."
-                existing_game.image = item.get("background_image") or ""
-                updated_count += 1
-            else:
-                new_game = Game(
-                    rawg_id=rawg_id,
-                    title=title,
-                    platforms="|".join(platforms),
-                    release_date=release_date,
-                    genre=", ".join(genres) if genres else "Unknown",
-                    status="Coming Soon",
-                    description="RAWG API에서 가져온 게임 출시 예정 정보입니다.",
-                    image=item.get("background_image") or "",
+                sync_results.append(
+                    {
+                        "target": target["label"],
+                        "fetched_count": len(items),
+                        "saved_count": saved_count,
+                        "updated_count": updated_count,
+                    }
                 )
-                db.add(new_game)
-                saved_count += 1
 
         db.commit()
 
         return {
             "message": "RAWG 게임 데이터 DB 저장 완료",
-            "saved_count": saved_count,
-            "updated_count": updated_count,
+            "saved_count": total_saved,
+            "updated_count": total_updated,
+            "sync_results": sync_results,
         }
 
     except Exception as e:
@@ -221,9 +268,7 @@ def get_upcoming_games(platform: str | None = None):
     db = SessionLocal()
 
     try:
-        query = db.query(Game).order_by(Game.release_date.asc())
-        games = query.all()
-
+        games = db.query(Game).order_by(Game.release_date.asc()).all()
         result = [game_to_dict(game) for game in games]
 
         if platform:
