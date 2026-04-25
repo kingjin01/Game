@@ -10,7 +10,7 @@ function App() {
   const [syncMessage, setSyncMessage] = useState('');
 
   const fetchGames = async () => {
-    let url = 'https://game-1muo.onrender.com';
+   let url = 'https://game-1muo.onrender.com/games/upcoming';
 
     if (platform) {
       url += `?platform=${platform}`;
@@ -35,8 +35,9 @@ function App() {
     setSyncMessage('게임 데이터를 업데이트하는 중입니다...');
 
     try {
-      const response = await fetch('https://game-1muo.onrender.com', {
-        method: 'POST',
+      const response = await fetch('https://game-1muo.onrender.com/games/sync', {
+  method: 'POST',
+});
       });
 
       const data = await response.json();
