@@ -10,7 +10,7 @@ function App() {
   const [syncMessage, setSyncMessage] = useState('');
 
   const fetchGames = async () => {
-   let url = 'https://game-1muo.onrender.com/games/upcoming';
+    let url = 'https://game-1muo.onrender.com/games/upcoming';
 
     if (platform) {
       url += `?platform=${platform}`;
@@ -20,7 +20,7 @@ function App() {
     const data = await response.json();
 
     const sortedGames = data.games.sort(
-      (a, b) => new Date(a.release_date) - new Date(b.release_date),
+      (a, b) => new Date(a.release_date) - new Date(b.release_date)
     );
 
     setGames(sortedGames);
@@ -36,8 +36,7 @@ function App() {
 
     try {
       const response = await fetch('https://game-1muo.onrender.com/games/sync', {
-  method: 'POST',
-});
+        method: 'POST',
       });
 
       const data = await response.json();
@@ -46,7 +45,7 @@ function App() {
         setSyncMessage(`업데이트 실패: ${data.error}`);
       } else {
         setSyncMessage(
-          `업데이트 완료! 새로 저장: ${data.saved_count}개, 갱신: ${data.updated_count}개`,
+          `업데이트 완료! 새로 저장: ${data.saved_count}개, 갱신: ${data.updated_count}개`
         );
         await fetchGames();
       }
@@ -81,7 +80,7 @@ function App() {
   };
 
   const filteredGames = games.filter((game) =>
-    game.title.toLowerCase().includes(search.toLowerCase()),
+    game.title.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -98,7 +97,8 @@ function App() {
           <span>AdSense 승인 후 이 위치에 광고가 표시됩니다.</span>
         </section>
 
-        {/* <button
+        {/* 
+        <button
           className="sync-button"
           onClick={syncGames}
           disabled={isSyncing}
@@ -106,7 +106,8 @@ function App() {
           {isSyncing ? '업데이트 중...' : '최신 게임 데이터 업데이트'}
         </button>
 
-        {syncMessage && <p className="sync-message">{syncMessage}</p>} */}
+        {syncMessage && <p className="sync-message">{syncMessage}</p>}
+        */}
       </header>
 
       <section className="controls">
@@ -183,16 +184,13 @@ function App() {
           </article>
         ))}
       </section>
+
       <footer className="footer">
         Game data and images provided by{' '}
         <a href="https://rawg.io/" target="_blank" rel="noreferrer">
           RAWG
         </a>
         .
-        <section className="ad-banner bottom-ad">
-          <p>광고 영역</p>
-          <span>게임 목록 하단 광고 자리입니다.</span>
-        </section>
       </footer>
     </div>
   );
