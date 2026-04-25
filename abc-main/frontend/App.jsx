@@ -89,7 +89,7 @@ function App() {
         <p className="badge">Game Release Calendar</p>
         <h1>다가오는 게임 출시일을 한눈에</h1>
         <p className="subtitle">
-          PC, PlayStation, Xbox, Switch 출시 예정 게임을 빠르게 확인하세요.
+          PC, PlayStation, Xbox, Switch, 모바일 출시 예정 게임을 빠르게 확인하세요.
         </p>
 
         {/* <section className="ad-banner">
@@ -119,12 +119,14 @@ function App() {
         />
 
         <select value={platform} onChange={(e) => setPlatform(e.target.value)}>
-          <option value="">전체 플랫폼</option>
-          <option value="PC">PC</option>
-          <option value="PlayStation">PlayStation</option>
-          <option value="Xbox">Xbox</option>
-          <option value="Switch">Switch</option>
-        </select>
+  <option value="">전체 플랫폼</option>
+  <option value="PC">PC</option>
+  <option value="PlayStation">PlayStation</option>
+  <option value="Xbox">Xbox</option>
+  <option value="Switch">Switch</option>
+  <option value="Android">Android</option>
+  <option value="iOS">iOS</option>
+</select>
       </section>
 
       <section className="game-grid">
