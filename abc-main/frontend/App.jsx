@@ -163,8 +163,8 @@ function App() {
 
             {selectedGameId === game.id && (
               <div className="detail-box">
-                <h3>게임 정보</h3>
-                <p>{game.description}</p>
+                <h3>Game Info</h3>
+                
 
                 <div className="detail-row">
                   <strong>출시일</strong>
