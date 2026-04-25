@@ -92,10 +92,10 @@ function App() {
           PC, PlayStation, Xbox, Switch 출시 예정 게임을 빠르게 확인하세요.
         </p>
 
-        <section className="ad-banner">
+        {/* <section className="ad-banner">
           <p>광고 영역</p>
           <span>AdSense 승인 후 이 위치에 광고가 표시됩니다.</span>
-        </section>
+        </section> */}
 
         {/* 
         <button
